@@ -1,12 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
-export interface AuthRequest extends Request {
-    user?: {
-        id: string;
-    };
-}
-
 interface JwtPayload {
     userId: string;
     name: string;
@@ -14,7 +8,7 @@ interface JwtPayload {
     exp?: number;
 }
 
-const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction): void => {
+const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
     try {
         const authHeader = req.headers.authorization;
 

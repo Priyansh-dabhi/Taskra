@@ -1,9 +1,8 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { isValidObjectId } from "mongoose";
 import Task from "../models/task.model.js";
-import { AuthRequest } from "../middleware/auth.middleware.js";
 
-export const getTasks = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getTasks = async (req: Request, res: Response): Promise<void> => {
     try {
         const tasks = await Task.find({ user: req.user?.id }).sort({ createdAt: -1 });
 
@@ -19,7 +18,7 @@ export const getTasks = async (req: AuthRequest, res: Response): Promise<void> =
     }
 };
 
-export const createTask = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createTask = async (req: Request, res: Response): Promise<void> => {
     try {
         const { title, description } = req.body as {
             title?: string;
@@ -52,7 +51,7 @@ export const createTask = async (req: AuthRequest, res: Response): Promise<void>
     }
 };
 
-export const updateTask = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateTask = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
 
@@ -114,7 +113,7 @@ export const updateTask = async (req: AuthRequest, res: Response): Promise<void>
     }
 };
 
-export const deleteTask = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteTask = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
 
