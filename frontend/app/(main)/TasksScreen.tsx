@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -7,8 +7,14 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import AddTaskSheet, {
   type AddTaskSheetHandle,
 } from "../../src/components/AddTaskSheet";
@@ -20,13 +26,62 @@ import {
   useUpdateTask,
 } from "../../src/hooks/useTasks";
 
+type FilterKey = "all" | "pending" | "completed";
+
+const FILTER_OPTIONS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },
+  { key: "completed", label: "Done" },
+];
+
 export default function TasksScreen() {
   const sheetRef = useRef<AddTaskSheetHandle>(null);
+  const { width: screenWidth } = useWindowDimensions();
   const { data: tasks = [], isLoading, isRefetching, refetch } = useTasks();
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
 
+  // ─── Feature 1: Filter state ──────────────────────────────────────────────
+  const [filter, setFilter] = useState<FilterKey>("all");
+
+  const filteredTasks = useMemo(() => {
+    if (filter === "pending") return tasks.filter((t) => !t.completed);
+    if (filter === "completed") return tasks.filter((t) => t.completed);
+    return tasks;
+  }, [tasks, filter]);
+
+  // ─── Feature 2: Progress bar animation ────────────────────────────────────
+  const completedCount = useMemo(
+    () => tasks.filter((t) => t.completed).length,
+    [tasks]
+  );
+  const totalCount = tasks.length;
+  const progress = totalCount === 0 ? 0 : completedCount / totalCount;
+  const allDone = totalCount > 0 && progress === 1;
+
+  const barMaxWidth = screenWidth - 40; // 20px padding on each side
+  const barWidth = useSharedValue(0);
+  const barColorProgress = useSharedValue(0);
+
+  useEffect(() => {
+    barWidth.value = withTiming(progress * barMaxWidth, { duration: 600 });
+    barColorProgress.value = withTiming(allDone ? 1 : 0, { duration: 400 });
+  }, [progress, allDone, barMaxWidth, barWidth, barColorProgress]);
+
+  const progressBarStyle = useAnimatedStyle(() => ({
+    width: barWidth.value,
+    backgroundColor:
+      barColorProgress.value > 0.5 ? "#4CAF50" : "#d9822b",
+  }));
+
+  // ─── Feature 3: Task counter ──────────────────────────────────────────────
+  const pendingCount = useMemo(
+    () => tasks.filter((t) => !t.completed).length,
+    [tasks]
+  );
+
+  // ─── Handlers (untouched) ─────────────────────────────────────────────────
   const handleCreateTask = async (title: string, description: string) => {
     if (!title.trim()) {
       Alert.alert("Missing title", "Please enter a title for your task.");
@@ -68,8 +123,10 @@ export default function TasksScreen() {
     }
   };
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <View style={styles.screen}>
+      {/* Hero */}
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>Your tasks</Text>
         <Text style={styles.heroSubtitle}>
@@ -77,14 +134,61 @@ export default function TasksScreen() {
         </Text>
       </View>
 
+      {/* Feature 3: Task counter badge */}
+      <View style={styles.badgeWrap}>
+        {pendingCount === 0 && totalCount > 0 ? (
+          <Text style={styles.badgeAllDone}>🎉 All tasks done!</Text>
+        ) : totalCount > 0 ? (
+          <Text style={styles.badgePending}>
+            {pendingCount} {pendingCount === 1 ? "task" : "tasks"} remaining
+          </Text>
+        ) : null}
+      </View>
+
+      {/* Feature 1: Filter tabs */}
+      <View style={styles.filterRow}>
+        {FILTER_OPTIONS.map(({ key, label }) => (
+          <Pressable
+            key={key}
+            onPress={() => setFilter(key)}
+            style={[
+              styles.filterTab,
+              filter === key && styles.filterTabActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                filter === key && styles.filterTextActive,
+              ]}
+            >
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Feature 2: Progress bar */}
+      {totalCount > 0 && (
+        <View style={styles.progressSection}>
+          <Text style={styles.progressLabel}>
+            {completedCount} of {totalCount} completed
+          </Text>
+          <View style={styles.progressTrack}>
+            <Animated.View style={[styles.progressFill, progressBarStyle]} />
+          </View>
+        </View>
+      )}
+
+      {/* Task list */}
       {isLoading ? (
         <View style={styles.stateWrap}>
-          <ActivityIndicator size="large" color="#1f7a8c" />
+          <ActivityIndicator size="large" color="#d9822b" />
           <Text style={styles.stateText}>Loading tasks...</Text>
         </View>
       ) : (
         <FlatList
-          data={tasks}
+          data={filteredTasks}
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
             <TaskCard
@@ -95,26 +199,35 @@ export default function TasksScreen() {
           )}
           contentContainerStyle={[
             styles.listContent,
-            tasks.length === 0 && styles.emptyListContent,
+            filteredTasks.length === 0 && styles.emptyListContent,
           ]}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={() => void refetch()}
-              tintColor="#1f7a8c"
+              tintColor="#d9822b"
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No tasks yet</Text>
+              <Text style={styles.emptyTitle}>
+                {filter === "all"
+                  ? "No tasks yet"
+                  : filter === "pending"
+                    ? "No pending tasks"
+                    : "No completed tasks"}
+              </Text>
               <Text style={styles.emptyText}>
-                Tap the add button to create your first task.
+                {filter === "all"
+                  ? "Tap the add button to create your first task."
+                  : "Try switching filters."}
               </Text>
             </View>
           }
         />
       )}
 
+      {/* FAB */}
       <Pressable
         onPress={() => sheetRef.current?.expand()}
         style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
@@ -122,6 +235,7 @@ export default function TasksScreen() {
         <Text style={styles.fabText}>+</Text>
       </Pressable>
 
+      {/* Bottom sheet */}
       <AddTaskSheet
         ref={sheetRef}
         onSubmit={handleCreateTask}
@@ -136,10 +250,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f4f7f5",
   },
+
+  /* ── Hero ── */
   hero: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 4,
   },
   heroTitle: {
     fontSize: 30,
@@ -151,6 +267,80 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#486581",
   },
+
+  /* ── Feature 3: Task counter badge ── */
+  badgeWrap: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 4,
+    minHeight: 28,
+  },
+  badgeAllDone: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#4CAF50",
+  },
+  badgePending: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#627d98",
+  },
+
+  /* ── Feature 1: Filter tabs ── */
+  filterRow: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 6,
+    gap: 10,
+  },
+  filterTab: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#d9e2ec",
+  },
+  filterTabActive: {
+    backgroundColor: "#d9822b",
+    borderColor: "#d9822b",
+  },
+  filterText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#627d98",
+  },
+  filterTextActive: {
+    color: "#ffffff",
+    fontWeight: "700",
+  },
+
+  /* ── Feature 2: Progress bar ── */
+  progressSection: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 14,
+  },
+  progressLabel: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#627d98",
+    marginBottom: 8,
+  },
+  progressTrack: {
+    width: "100%",
+    height: 6,
+    borderRadius: 10,
+    backgroundColor: "#d9e2ec",
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: 6,
+    borderRadius: 10,
+  },
+
+  /* ── Loading state ── */
   stateWrap: {
     flex: 1,
     alignItems: "center",
@@ -160,6 +350,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: "#486581",
   },
+
+  /* ── Task list ── */
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 120,
@@ -185,6 +377,8 @@ const styles = StyleSheet.create({
     color: "#627d98",
     textAlign: "center",
   },
+
+  /* ── FAB ── */
   fab: {
     position: "absolute",
     right: 24,

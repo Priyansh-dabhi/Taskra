@@ -16,6 +16,30 @@ interface TaskCardProps {
 }
 
 /**
+ * Formats a date string into a human-friendly relative or absolute timestamp.
+ */
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60_000);
+  const diffHours = Math.floor(diffMs / 3_600_000);
+  const diffDays = Math.floor(diffMs / 86_400_000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
+}
+
+/**
  * Swipe-able task card inspired by iOS Mail / Todoist.
  *
  *  ➡️  Right swipe → green "Done" action  (renderLeftActions)
@@ -122,6 +146,14 @@ export default function TaskCard({ task, onComplete, onDelete }: TaskCardProps) 
               {task.description}
             </Text>
           ) : null}
+
+          {/* Timestamp */}
+          <View style={styles.timestampRow}>
+            <Ionicons name="time-outline" size={12} color="#9fb3c8" />
+            <Text style={styles.timestampText}>
+              {formatDate(task.createdAt)}
+            </Text>
+          </View>
         </View>
 
         {task.completed && (
@@ -182,6 +214,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#e6f7ee",
     alignItems: "center",
     justifyContent: "center",
+  },
+  timestampRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 4,
+  },
+  timestampText: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#9fb3c8",
   },
 
   /* ---- Swipe action backgrounds ---- */
