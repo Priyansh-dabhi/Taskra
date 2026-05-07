@@ -1,17 +1,17 @@
-import React, { useState } from "react";
+import React, { useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import { Task } from "../../src/api/tasks";
+import AddTaskSheet, {
+  type AddTaskSheetHandle,
+} from "../../src/components/AddTaskSheet";
 import TaskCard from "../../src/components/TaskCard";
 import {
   useCreateTask,
@@ -21,16 +21,13 @@ import {
 } from "../../src/hooks/useTasks";
 
 export default function TasksScreen() {
-  const [isComposerVisible, setIsComposerVisible] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-
+  const sheetRef = useRef<AddTaskSheetHandle>(null);
   const { data: tasks = [], isLoading, isRefetching, refetch } = useTasks();
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
 
-  const handleCreateTask = async () => {
+  const handleCreateTask = async (title: string, description: string) => {
     if (!title.trim()) {
       Alert.alert("Missing title", "Please enter a title for your task.");
       return;
@@ -41,9 +38,6 @@ export default function TasksScreen() {
         title: title.trim(),
         description: description.trim() || undefined,
       });
-      setTitle("");
-      setDescription("");
-      setIsComposerVisible(false);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to create task";
@@ -51,11 +45,11 @@ export default function TasksScreen() {
     }
   };
 
-  const handleToggleComplete = async (task: Task) => {
+  const handleCompleteTask = async (taskId: string) => {
     try {
       await updateTaskMutation.mutateAsync({
-        id: task._id,
-        completed: !task.completed,
+        id: taskId,
+        completed: true,
       });
     } catch (error) {
       const message =
@@ -95,10 +89,8 @@ export default function TasksScreen() {
           renderItem={({ item }) => (
             <TaskCard
               task={item}
-              onToggleComplete={handleToggleComplete}
+              onComplete={handleCompleteTask}
               onDelete={handleDeleteTask}
-              isUpdating={updateTaskMutation.isPending}
-              isDeleting={deleteTaskMutation.isPending}
             />
           )}
           contentContainerStyle={[
@@ -124,54 +116,17 @@ export default function TasksScreen() {
       )}
 
       <Pressable
-        onPress={() => setIsComposerVisible(true)}
+        onPress={() => sheetRef.current?.expand()}
         style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
       >
         <Text style={styles.fabText}>+</Text>
       </Pressable>
 
-      <Modal
-        visible={isComposerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsComposerVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>New task</Text>
-            <TextInput
-              value={title}
-              onChangeText={setTitle}
-              placeholder="Title"
-              style={styles.input}
-            />
-            <TextInput
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Description"
-              multiline
-              style={[styles.input, styles.textArea]}
-            />
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setIsComposerVisible(false)}
-                style={styles.secondaryButton}
-              >
-                <Text style={styles.secondaryButtonText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void handleCreateTask()}
-                style={styles.primaryButton}
-                disabled={createTaskMutation.isPending}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {createTaskMutation.isPending ? "Saving..." : "Save"}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <AddTaskSheet
+        ref={sheetRef}
+        onSubmit={handleCreateTask}
+        isSubmitting={createTaskMutation.isPending}
+      />
     </View>
   );
 }
@@ -234,6 +189,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 24,
     bottom: 28,
+    zIndex: 20,
     width: 62,
     height: 62,
     borderRadius: 31,
@@ -253,66 +209,5 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 36,
     color: "#ffffff",
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(16, 42, 67, 0.25)",
-  },
-  modalCard: {
-    padding: 20,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: "#ffffff",
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#102a43",
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#d9e2ec",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: "#102a43",
-    backgroundColor: "#f8fbff",
-    marginBottom: 12,
-  },
-  textArea: {
-    minHeight: 110,
-    textAlignVertical: "top",
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  secondaryButton: {
-    flex: 1,
-    marginRight: 8,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    backgroundColor: "#eef2f6",
-  },
-  secondaryButtonText: {
-    color: "#486581",
-    fontWeight: "700",
-  },
-  primaryButton: {
-    flex: 1,
-    marginLeft: 8,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    backgroundColor: "#1f7a8c",
-  },
-  primaryButtonText: {
-    color: "#ffffff",
-    fontWeight: "700",
   },
 });

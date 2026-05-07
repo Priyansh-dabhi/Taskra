@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 1,
-    color: "#1f7a8c",
+    color: "#d9822b",
     marginBottom: 8,
   },
   title: {
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: "#102a43",
-    backgroundColor: "#f8fbff",
+    backgroundColor: "#fffaf2",
     marginBottom: 12,
   },
   passwordField: {
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#d9e2ec",
     borderRadius: 16,
-    backgroundColor: "#f8fbff",
+    backgroundColor: "#fffaf2",
     marginBottom: 12,
     paddingRight: 16,
   },
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: "center",
-    backgroundColor: "#1f7a8c",
+    backgroundColor: "#d9822b",
     marginTop: 4,
   },
   primaryButtonText: {
@@ -161,14 +161,14 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   buttonDisabled: {
-    backgroundColor: "#7aa5ad",
+    backgroundColor: "#d8a46d",
   },
   linkWrap: {
     marginTop: 16,
     alignItems: "center",
   },
   linkText: {
-    color: "#1f7a8c",
+    color: "#d9822b",
     fontWeight: "600",
   },
 });

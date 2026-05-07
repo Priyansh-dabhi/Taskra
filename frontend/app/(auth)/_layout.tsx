@@ -7,13 +7,6 @@ export default function AuthLayout() {
       screenOptions={{
         contentStyle: { backgroundColor: "#f4f7f5" },
         headerTitleAlign: "center",
-        headerBackTitleVisible: false,
-        headerLeftContainerStyle: {
-          paddingLeft: 8,
-        },
-        headerRightContainerStyle: {
-          paddingRight: 8,
-        },
         headerTitleStyle: {
           fontSize: 22,
           fontWeight: "700",
