@@ -119,7 +119,7 @@ npm install
 Create a `.env` file in the `frontend/` directory:
 
 ```env
-EXPO_PUBLIC_API_BASE_URL=http://192.168.1.10:5000
+EXPO_PUBLIC_API_BASE_URL=http://YOUR_LOCAL_IP:5000
 ```
 
 > ⚠️ Replace `192.168.1.10` with your machine's local network IP. Use `localhost` only if testing on an emulator running on the same machine.
